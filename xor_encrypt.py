@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import sys
 import datetime
 import argparse
@@ -48,8 +50,8 @@ def main():
     parser.add_argument(
         '-k', '--key-part',
         type=str,
-        default="secureKey",
-        help="The hardcoded string part of the decryption key (default: secureKey)."
+        default="LudicrousGibs",
+        help="The hardcoded string part of the decryption key (default: LudicrousGibs)."
     )
     parser.add_argument(
         '-y', '--year',
