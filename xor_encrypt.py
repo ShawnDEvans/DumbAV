@@ -42,19 +42,19 @@ def main():
     parser.add_argument(
         '-o', '--output',
         type=str,
-        default="shellcode_data.h",
-        help="Output C header file name (default: shellcode_data.h)."
+        default="hamdinger_data.h",
+        help="Output C header file name (default: hamdinger_data.h)."
     )
     parser.add_argument(
         '-k', '--key-part',
         type=str,
         default="secureKey",
-        help="The hardcoded string part of the decryption key (default: secureKey123)."
+        help="The hardcoded string part of the decryption key (default: secureKey)."
     )
     parser.add_argument(
         '-y', '--year',
         type=int,
-        help="Optional: Manually specify the calendar year for the key. If omitted, the current system year will be used."
+        help="Optional: Manually specify the calendar year for the key. If omitted, the current system year will be used. Within xor_loader.c the year is appended to every key at runtime to provide a dynamic element."
     )
 
     args = parser.parse_args()
