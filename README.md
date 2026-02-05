@@ -1,13 +1,13 @@
 # DumbAV 
 DumbAV is a handy collection of simple AV bypass methods. This is a mish-mash of some of the methods I've leveraged by bypass AV and end-point controls in Windows environments. This assumes that you have an established command execution foothold on a victim host and need to elevate privileges. These are not novel techniques, just repackated ideas that have been around for a while. 
 
-* remote_dll_loader.exe - This program loads a DLL from a provided URL into memory and executes it. No touching disk, which is nice.
+* remote_dll_loader.exe - This program loads a DLL from a provided URL or local file into memory and executes it. No touching disk, which is nice.
 * xor_loader_dll.c - This DLL loads XOR encrypted shellcode from hamdinger_data.h and executes it. Pairs well with remote_dll_loader.exe.
 * xor_encrypt.py - This Python script converts raw shellcode into an XOR encrypted char array stored in the header, hamdinger_data.h.
 * privesc_dll.c - This DLL uses the SeDebugPrivilege and token cloning to (hopefully) launch an elevated process. Pairs well with remote_dll_loader.exe
 
 ## Do these work?
-Absolutely, maybe! Some of these methods are long in the tooth, but provide a good baseline for control validatio. remote_dll_loader.exe is almost univesrally ignored by AV. It's the remotely hosted DLLs it helps execute that tend to trigger an alert. 
+Absolutely, maybe! Some of these methods are long in the tooth, but provide a good baseline for control validation. remote_dll_loader.exe is almost univesrally ignored by AV. It's the remotely hosted DLLs it helps execute that tend to trigger an alert. 
 
 ## How do I use these? 
 
@@ -15,7 +15,7 @@ I compile all of the Windows DLLs in Linux with x86_64-w64-mingw32-gcc. Most of 
 
 ### Remote DLL Loader
 
-Lets start with most versitle remote_dll_loader.c. This program accepts as an argument a URL or local file that (your C2) that points to a DLL you'd like to run on your victim machine. 
+Lets start with most versitle remote_dll_loader.c. This program accepts as an argument a URL (your C2) or local file that that points to a DLL you'd like to run on your victim machine. 
 
 Compile to EXE:
 
