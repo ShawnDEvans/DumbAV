@@ -1,5 +1,5 @@
-# DumbAV is a collection AV bypass methods. 
-This is a mish-mash of some of the methods I've leveraged by bypass AV and end-point controls in Windows environments. This assumes that you have an established command execution foothold on a victim host and need to elevate privileges. These are not novel techniques, just repackated ideas that have been around for a while. 
+# DumbAV 
+DumbAV is a handy collection of simple AV bypass methods. This is a mish-mash of some of the methods I've leveraged by bypass AV and end-point controls in Windows environments. This assumes that you have an established command execution foothold on a victim host and need to elevate privileges. These are not novel techniques, just repackated ideas that have been around for a while. 
 
 * remote_dll_loader.exe - This program loads a DLL from a provided URL into memory and executes it. No touching disk, which is nice.
 * xor_loader_dll.c - This DLL loads XOR encrypted shellcode from hamdinger_data.h and executes it. Pairs well with remote_dll_loader.exe.
