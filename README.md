@@ -59,10 +59,10 @@ C:\Windows\system32>whoami
 nt authority\system
 
 C:\Windows\system32>
+```
 
 #### Remote Hosted
 
-```
 The scenario below demonstrates how privesc.dll can be hosted on a C2 server. This way we never touch disk with the malicious bits. First we fire up a simple python server to host the DLL.
 
 ```
