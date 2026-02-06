@@ -105,5 +105,5 @@ From here you can just use the remote_dll_loader.exe program to relfectively loa
 
 Keep in mind that remote_dll_loader.exe just loads a DLL and executes it. The DLL can do absolutely anything. You can use the msgbox.dll as an easy proof-of-concept.
 
-![msgbox PoC](images/mogsbox_poc.png)
+![msgbox PoC](images/msgbox_poc.png)
 
