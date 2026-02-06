@@ -101,7 +101,9 @@ $ x86_64-w64-mingw32-gcc xor_loader.c -shared -o hamdinger.dll
 
 From here you can just use the remote_dll_loader.exe program to relfectively load an execute the DLL. With any luck your MSF payload will happily run in memory and you get a nice Metasploit session open. 
 
+### Non-malicious PoC 
 
+Keep in mind that remote_dll_loader.exe just loads a DLL and executes it. The DLL can do absolutely anything. You can use the msgbox.dll as an easy proof-of-concept.
 
-
+![msgbox PoC](images/mogsbox_poc.png)
 
