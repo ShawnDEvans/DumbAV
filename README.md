@@ -200,13 +200,9 @@ The original `xor_loader.c` served as a "Dumb" baseline to prove that simple sta
 * **Original:** Relied on a single block of RWX memory where code was decrypted and executed in the same place.
 * **Pro:** Implements **Dual View Mapping**. One view is mapped as **Read/Write (RW)** for the decryption process, while a second view of the *same* physical memory is mapped as **Read/Execute (RX)**. This ensures that no single memory region is ever both Writable and Executable at the same time.
 
-
-
 ##### 3. EDR Hook Bypass (Halo’s Gate & Indirect Syscalls)
 * **Original:** Used standard Win32 API calls like `CreateThread`. These are heavily hooked by EDRs (CrowdStrike, Defender, etc.) in user-mode (`ntdll.dll`).
 * **Pro:** Uses **Halo’s Gate** to dynamically discover Syscall Numbers (SSNs) by scanning memory for unhooked neighboring functions. It then executes these calls via **Indirect Syscalls**, jumping into the middle of a legitimate `syscall` instruction inside `ntdll.dll`. This hides the origin of the call and makes the stack look like a trusted Windows process.
-
-
 
 ##### 4. Heuristic Thread Masking (Context Hijacking)
 * **Original:** Used `CreateThread` pointing directly to the shellcode, which is easily flagged as "Unbacked Code Execution."
@@ -216,15 +212,14 @@ The original `xor_loader.c` served as a "Dumb" baseline to prove that simple sta
 * **Original:** Run as a standalone EXE or loaded via standard disk-based DLL loading.
 * **Pro:** Optimized for **Reflective DLL Loading**. It includes a `DllMain` that handles background thread spawning to bypass the "Loader Lock." When combined with the updated `remote_dll_loader.c`, it supports full in-memory execution from a URL, with automated section protection flipping to ensure the final memory state looks identical to a legitimate Windows module.
 
+#### How to Build Hamdinger Pro
+```
+$ nasm -f win64 syscalls.asm -o syscalls.o
 
+$ x86_64-w64-mingw32-gcc hamdinger_pro.c syscalls.o -shared -o hamdinger.dll (Move this to your web server)
 
----
-
-## 🛠️ How to Build
-
-### 1. Assemble the Syscall Bridge
-```bash
-nasm -f win64 syscalls.asm -o syscalls.o
+$ x86_64-w64-mingw32-gcc remote_dll_loader.c -o loader.exe -lwininet
+```
 
 #### A bit more on indirect syscalls
 
